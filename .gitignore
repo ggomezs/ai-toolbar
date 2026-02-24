@@ -1,0 +1,15 @@
+# Entorno Virtual Python
+venv/
+__pycache__/
+*.pyc
+
+# Base de datos local
+*.db
+sqlite.db
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# Extensión / Openspec (opcional si openspec se commitea, pero asumo que no queremos ignorarlo)
+# /openspec/
