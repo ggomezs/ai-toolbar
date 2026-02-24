@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "AI Agent Toolbar - Shadows Logger",
+  "version": "1.0",
+  "description": "Silent extension to capture and log interactions with AI Models (Phase 1)",
+  "permissions": [
+    "scripting",
+    "declarativeNetRequest",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://chatgpt.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://chatgpt.com/*"],
+      "js": ["content_isolated.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["adapters.js", "content_main.js"],
+      "matches": ["*://chatgpt.com/*"]
+    }
+  ]
+}
