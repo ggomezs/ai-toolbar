@@ -44,5 +44,41 @@
         return originalFetch.apply(this, args);
     };
 
-    // Podríamos añadir Monkey-patch de XMLHttpRequest aquí en el futuro si hiciera falta.
+    // Monkey-patch de XMLHttpRequest para soportar Gemini y sistemas Legacy
+    const originalXhrOpen = XMLHttpRequest.prototype.open;
+    const originalXhrSend = XMLHttpRequest.prototype.send;
+
+    XMLHttpRequest.prototype.open = function (method, url) {
+        this._method = method;
+        this._url = typeof url === 'string' ? url : (url && url.href) || "";
+        return originalXhrOpen.apply(this, arguments);
+    };
+
+    XMLHttpRequest.prototype.send = function (body) {
+        try {
+            if (this._method && ['POST', 'PUT'].includes(this._method.toUpperCase())) {
+                const isString = typeof body === 'string';
+                const isFormData = body instanceof FormData;
+
+                if (isString || isFormData) {
+                    // Loguear URLs crudos para depuracion si falla
+                    console.log("[Shadow Logger - Debug] XHR interceptado hacia:", this._url);
+
+                    if (window.AI_ADAPTERS) {
+                        const payload = window.AI_ADAPTERS.processRequest(this._url, body);
+                        if (payload) {
+                            console.log("[Shadow Logger] Payload capturado exitosamente (XHR)", payload);
+                            window.postMessage({
+                                type: "SHADOW_LOGGER_PAYLOAD",
+                                payload: payload
+                            }, "*");
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("[Shadow Logger] Error evaluando peticion XHR proxy:", error);
+        }
+        return originalXhrSend.apply(this, arguments);
+    };
 })();

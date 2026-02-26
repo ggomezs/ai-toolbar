@@ -9,22 +9,34 @@
     "storage"
   ],
   "host_permissions": [
-    "*://chatgpt.com/*"
+    "*://chatgpt.com/*",
+    "*://gemini.google.com/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["*://chatgpt.com/*"],
-      "js": ["content_isolated.js"],
+      "matches": [
+        "*://chatgpt.com/*",
+        "*://gemini.google.com/*"
+      ],
+      "js": [
+        "content_isolated.js"
+      ],
       "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["adapters.js", "content_main.js"],
-      "matches": ["*://chatgpt.com/*"]
+      "resources": [
+        "adapters.js",
+        "content_main.js"
+      ],
+      "matches": [
+        "*://chatgpt.com/*",
+        "*://gemini.google.com/*"
+      ]
     }
   ]
 }
