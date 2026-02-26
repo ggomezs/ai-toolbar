@@ -5,6 +5,33 @@ const adapters = {
   // Regex para identificar peticiones a OpenAI Web
   matchers: [
     {
+      provider: "OpenAI-Attachment",
+      urlRegex: /chatgpt\.com\/backend-api(\/[a-zA-Z0-9_-]+)*\/files/i,
+      extract: (requestData) => {
+        try {
+          let fileName = "Attached File";
+          if (requestData.body instanceof FormData) {
+            // El campo usado por OpenAI suele ser 'file'
+            const fileObj = requestData.body.get('file');
+            if (fileObj && fileObj.name) {
+              fileName = fileObj.name;
+            }
+          }
+
+          return {
+            provider: "OpenAI",
+            model: "file-attachment",
+            raw_prompt: `[Attachment Uploaded]: ${fileName}`,
+            timestamp: new Date().toISOString(),
+            has_attachments: true
+          };
+        } catch (e) {
+          console.error("[Shadow Logger] Error parsing OpenAI Attachment payload:", e.message);
+        }
+        return null;
+      }
+    },
+    {
       provider: "OpenAI",
       urlRegex: /chatgpt\.com\/backend-(api|anon)(\/[a-zA-Z0-9_-]+)*\/conversation/i,
       extract: (requestData) => {
@@ -13,22 +40,38 @@ const adapters = {
 
           let rawPrompt = "Unknown prompt structure";
           let model = body.model || "unknown";
+          let hasAttachments = false;
+          let attachmentNames = [];
 
           // Buscar el mensaje del usuario en el array
-
           if (body.messages && Array.isArray(body.messages)) {
             const userMessage = body.messages.find(m => m.author && m.author.role === 'user');
-            if (userMessage && userMessage.content && userMessage.content.parts) {
-              rawPrompt = userMessage.content.parts.join(" ");
+            if (userMessage) {
+              if (userMessage.content && Array.isArray(userMessage.content.parts)) {
+                rawPrompt = userMessage.content.parts.map(p => typeof p === 'string' ? p : JSON.stringify(p)).join(" ");
+              }
+
+              if (userMessage.metadata && userMessage.metadata.attachments && Array.isArray(userMessage.metadata.attachments)) {
+                if (userMessage.metadata.attachments.length > 0) {
+                  hasAttachments = true;
+                  attachmentNames = userMessage.metadata.attachments.map(a => a.name || a.id || "Unknown File").filter(Boolean);
+                }
+              }
             }
           }
 
           if (rawPrompt !== "Unknown prompt structure") {
+            let finalPrompt = rawPrompt.trim();
+            if (hasAttachments) {
+              finalPrompt += `\n[Attachments: ${attachmentNames.join(', ')}]`;
+            }
+
             return {
               provider: "OpenAI",
               model: model,
-              raw_prompt: rawPrompt,
-              timestamp: new Date().toISOString()
+              raw_prompt: finalPrompt,
+              timestamp: new Date().toISOString(),
+              has_attachments: hasAttachments
             };
           } else {
             console.log("[Shadow Logger] Atencion: La estructura del prompt es desconocida en esta peticion. Body de messages:");
